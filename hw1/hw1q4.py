@@ -15,7 +15,7 @@ def is_palindrome(str):
     # Check if the original string is equal to its reverse complement
     return str == reverse_comp_str
 
-# Generate all the possible DNA strings
+# Generate all the valid DNA strings
 def generate_valid_dna_strings(n):
     dna_bases = ['A', 'T', 'G', 'C']
     result = set()
@@ -26,7 +26,6 @@ def generate_valid_dna_strings(n):
             result.add(curr_str)
         for base in dna_bases:
             generate(curr_str + base, len + 1)
-    result = set()
     generate('', 0)
     return result
 
