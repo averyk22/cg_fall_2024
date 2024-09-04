@@ -38,7 +38,7 @@ input_file = sys.argv[1] # First argument: input filename
 output_file = sys.argv[2] # Second argument: output filename
 
 with open(input_file, 'r') as in_file, open(output_file, 'w') as out_file:
-    n = int(in_file.read())
+    n = int(in_file.read().strip())
     palindromes = sorted(generate_valid_dna_strings(n))
     for palindrome in palindromes:
         out_file.write(palindrome + '\n')

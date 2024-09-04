@@ -47,7 +47,7 @@ input_file = sys.argv[1] # First argument: input filename
 output_file = sys.argv[2] # Second argument: output filename
 
 with open(input_file, 'r') as in_file, open(output_file, 'w') as out_file:
-    rna_sequence = in_file.read()
+    rna_sequence = in_file.read().strip()
     # Ignore the values that are not ACGU
     rna_sequence = ''.join(char for char in rna_sequence if char in 'ACGU')
     protein_sequence = convert_rna_to_aa_sequence(rna_sequence)
