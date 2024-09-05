@@ -45,11 +45,12 @@ if len(sys.argv) != 3:
 # Assign the input and output filenames from command-line arguments
 input_file = sys.argv[1] # First argument: input filename
 output_file = sys.argv[2] # Second argument: output filename
-
+rna_sequence = ''
 with open(input_file, 'r') as in_file, open(output_file, 'w') as out_file:
-    rna_sequence = in_file.read().strip()
-    # Ignore the values that are not ACGU
-    rna_sequence = ''.join(char for char in rna_sequence if char in 'ACGU')
+    for line in in_file:
+        for c in line:
+            if c in 'ACGU':
+                rna_sequence += c
     protein_sequence = convert_rna_to_aa_sequence(rna_sequence)
 
     # Create a dictionary to be able to count aa for sequence

@@ -1,6 +1,9 @@
 # mRNA vaccine design
 # Input: Given an amino-acid sequence
 # Ouput: Nucleotide Sequence that Maximizes the combined number of Cs and Gs, ties resolved with lexico
+# make another codon table with max C and G, but choose the one lexicographically greater if the are equal
+# run through codon table once for each key value 
+# pull all the codons and build the sequence
 
 table = {
     'A': ['GCU', 'GCC', 'GCA', 'GCG'],
@@ -25,21 +28,15 @@ table = {
     'Y': ['UAU', 'UAC'],     
     '*': ['UAA', 'UAG', 'UGA'] 
 }
+def count_cg(codon):
+    return codon.count('C') + codon.count('G')
 
-def generate_sequences(aa_sequence):
-    def generate_helper(curr_ind, curr_sequence):
-        if curr_ind == len(aa_sequence):
-            sequences.append(curr_sequence)
-            return
-        aa = aa_sequence[curr_ind]
-        if aa not in table:
-            return
-        for codon in table[aa]:
-            generate_helper(curr_ind+1, curr_sequence + codon)
-
-    sequences = []
-    generate_helper(0,"")
-    return sequences
+def modify_table(table):
+    modified_table = {}
+    for aa, codons in table.items():
+        sorted_codons = sorted(codons, key=lambda x: (-count_cg(x), x))
+        modified_table[aa] = sorted_codons[0]
+    return modified_table
 
 import sys
 if len(sys.argv) != 3:
@@ -49,12 +46,20 @@ if len(sys.argv) != 3:
 input_file = sys.argv[1] # First argument: input filename
 output_file = sys.argv[2] # Second argument: output filename
 
+codon_table = modify_table(table)
+aa_sequence = ''
 with open(input_file, 'r') as in_file:
-    aa_sequence = in_file.readline().strip()
-    aa_sequence = ''.join(char for char in aa_sequence if char in 'ACDEFGHIKLMNPQRSTVWY')
+    for line in in_file:
+        # Filter valid amino acid characters and concatenate
+        aa_sequence += ''.join(char for char in line if char in 'ACDEFGHIKLMNPQRSTVWY*')
 
-sequences = generate_sequences(aa_sequence)
-sequences.sort(key=lambda seq: (-seq.count('C'), -seq.count('G'), seq))
+
+result = []
+for aa in aa_sequence:
+    codon = codon_table[aa]
+    if codon == '*':
+        break
+    result.append(codon)
 
 with open(output_file, 'w') as out_file:
-        out_file.write(sequences[0])
+    out_file.write(''.join(result))

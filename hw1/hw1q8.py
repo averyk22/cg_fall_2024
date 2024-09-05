@@ -12,10 +12,13 @@ if len(sys.argv) != 3:
 
 input_file = sys.argv[1] # First argument: input filename
 output_file = sys.argv[2] # Second argument: output filename
-
+dna_string = ''
 with open(input_file, 'r') as in_file:
-    dna_string = in_file.readline().strip()
-
+    for line in in_file:
+        for c in line:
+            if c in ('AGTC'):
+                dna_string += c
+print(dna_string)
 # Dictionary to store counts and all the indices that have substrings of that count
 count_dict = defaultdict(lambda: [0, []])
 for i in range(len(dna_string) - 5):
