@@ -1,3 +1,4 @@
+
 # mRNA vaccine design
 # Input: Given an amino-acid sequence
 # Ouput: Nucleotide Sequence that Maximizes the combined number of Cs and Gs, ties resolved with lexico
@@ -57,7 +58,9 @@ with open(input_file, 'r') as in_file:
 result = []
 for aa in aa_sequence:
     codon = codon_table[aa]
-    if codon == '*':
+    # If we see a break amino acid, print the codon and then break/stop printing
+    if aa == '*':
+        result.append(codon)
         break
     result.append(codon)
 
