@@ -1,6 +1,7 @@
 # Build a k-mer index of a genome for a given value of k from a FASTA file
 # Input: FASTA file and k.txt which contains a single positive integer value
 # Output: two values separated by space to the output file: total # of distinct keys and the number of keys that appear once exactly 
+
 import sys
 import collections
 from collections import defaultdict
@@ -15,15 +16,17 @@ output_file = sys.argv[3]
 with open(fasta_file, 'r') as fasta_file:
     fasta_input = ''
     for line in fasta_file:
-        for c in line:
-            if c in ('ACGT'):
-                fasta_input += c
+        line = line.strip()
+        if not line.startswith('>'):
+            for c in line:
+                if c in ('ACGT'):
+                    fasta_input += c
 with open(k_file, 'r') as k_file:
     k_index = k_file.readline().strip()
     k_index = int(k_index)
 
 # Code taken from k-mer hashmap implementation from class notes
-index = {}
+index = collections.defaultdict()
 for i in range(len(fasta_input) - k_index + 1):  # for each k-mer
     kmer = fasta_input[i:i+k_index]
     if kmer not in index:
