@@ -49,8 +49,6 @@ def approximate_matching(read, index, fasta_input, num_mismatches, kmer_len):
     for i in range(0, len(read) - kmer_len + 1, kmer_len):
         partition = read[i:i + kmer_len]
         partitions.append(partition)
-    
-    print(partitions)
     for p, string in enumerate(partitions):
         # Checking for condition 1 about num index hits
         index_hits = index[string]
@@ -59,7 +57,7 @@ def approximate_matching(read, index, fasta_input, num_mismatches, kmer_len):
         # Checking for condition 2 mismatches
         for index_hit in index_hits:
             start_pos = index_hit - p * kmer_len
-            # Check the strings that are not in bound
+            # Check the start position to make sure its within bound
             if start_pos < 0 or start_pos + len(read) > len(fasta_input):
                 continue 
             mismatches = 0
@@ -68,7 +66,6 @@ def approximate_matching(read, index, fasta_input, num_mismatches, kmer_len):
                     mismatches += 1
                     if mismatches > num_mismatches:
                         break
-            print(mismatches)
             if mismatches <= num_mismatches:
                 total_hits_dict[mismatches].append(start_pos)
     
@@ -78,6 +75,7 @@ def approximate_matching(read, index, fasta_input, num_mismatches, kmer_len):
     # Formatting of result
     # First 5 elements that are being printed
     result = ' '.join(map(str, index_hits_counts))
+    # Second half
     for mismatches in range(num_mismatches + 1):
         offsets = total_hits_dict.get(mismatches, [])
         if offsets:
@@ -97,7 +95,6 @@ fasta_file = sys.argv[1]
 fastq_file = sys.argv[2]
 output_file = sys.argv[3]
 index, fasta_input = build_kmer_index(int(kmer_len), fasta_file)
-print(index)
 reads = parse_fastq(fastq_file)
 with open(output_file, 'w') as out_file:
     for read in reads:
