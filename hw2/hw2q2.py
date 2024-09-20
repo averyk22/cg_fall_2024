@@ -2,7 +2,12 @@
 # Input: FASTA file and k.txt which contains a single positive integer value
 # Output: two values separated by space to the output file: total # of distinct keys and the number of keys that appear once exactly 
 
-import sys
+# Notebook Code Used: 
+# - https://nbviewer.org/github/BenLangmead/comp-genomics-class/blob/master/notebooks/CG_KmerIndexHash.ipynb
+# - https://nbviewer.org/github/BenLangmead/comp-genomics-class/blob/master/notebooks/FASTQ.ipynb
+
+
+mport sys
 import collections
 from collections import defaultdict
 
@@ -30,7 +35,7 @@ with open(k_file, 'r') as k_file:
     k_index = k_file.readline().strip()
     k_index = int(k_index)
 
-# Code modified from k-mer implementation from notebook (https://nbviewer.org/github/BenLangmead/comp-genomics-class/blob/master/notebooks/CG_KmerIndexHash.ipynb)
+# Code modified from k-mer implementation from notebook 
 index = collections.defaultdict()
 for i in range(len(fasta_input) - k_index + 1):  # for each k-mer
     kmer = fasta_input[i:i+k_index]

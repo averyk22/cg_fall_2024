@@ -9,7 +9,8 @@
 # 4. total number base quality values >= 30
 # 5. total number of chars not A, C, G, T
 
-# Notebook that snippets of code were taken from: https://nbviewer.org/github/BenLangmead/comp-genomics-class/blob/master/notebooks/FASTQ.ipynb
+# Notebook code used: 
+# - https://nbviewer.org/github/BenLangmead/comp-genomics-class/blob/master/notebooks/FASTQ.ipynb
 
 from io import StringIO
 import sys
@@ -20,7 +21,7 @@ def phred33_to_q(qual):
   return ord(qual)-33
 
 # Function taken from notebook, but made modifications to it for the specific conditions
-def parse_fastq(fh):
+def parse_fastq_and_find_summary(fh):
     """ Parse reads from a FASTQ filehandle.  For each read, we
         return a name, nucleotide-string, quality-string triple. """
     
@@ -54,7 +55,6 @@ def parse_fastq(fh):
             if score > highest_score:
                 highest_score = score
                 highest_index = read_index
-
         for score in quality_scores:
             # Condition 3: number of scores less than 10
             if score < 10:
@@ -77,6 +77,6 @@ fastq_file = sys.argv[1] # First argument: input filename
 summary_file = sys.argv[2] # Second argument: output filename
 
 with open(fastq_file, 'r') as in_file:
-    lowest_index, highest_index, tot_less_than_10, tot_ge_30, num_not_chars = parse_fastq(in_file)
+    lowest_index, highest_index, tot_less_than_10, tot_ge_30, num_not_chars = parse_fastq_and_find_summary(in_file)
 with open(summary_file, 'w') as out_file:
     out_file.write(f"{lowest_index} {highest_index} {tot_less_than_10} {tot_ge_30} {num_not_chars}")

@@ -3,11 +3,12 @@
 # Notebook links references:
 # - https://nbviewer.org/github/BenLangmead/comp-genomics-class/blob/master/notebooks/CG_Naive.ipynb
 # - https://nbviewer.org/github/BenLangmead/comp-genomics-class/blob/master/notebooks/CG_KmerIndexHash.ipynb
+# - https://nbviewer.org/github/BenLangmead/comp-genomics-class/blob/master/notebooks/FASTQ.ipynb
 
 import sys
 import collections
 
-# Build the 6mer index, taken from previous questions/notebook
+# Parses the fasta, code taken from previous questions/notebook
 def parse_fasta(fasta_file):
     with open(fasta_file, 'r') as file:
         fasta_input = ''
@@ -17,9 +18,9 @@ def parse_fasta(fasta_file):
                 fasta_input += ''.join(c for c in line if c in ('A', 'C', 'G', 'T'))
     return fasta_input
 
-# Create the index of kmers given fasta input, taken from previous questions
+# Create the index of kmers given fasta input, code taken from previous questions
 def create_index(fasta_input):
-    index = collections.defaultdict(list)
+    index = collections.defaultdict()
     for i in range(len(fasta_input) - 6 + 1):  # For each 6-mer
         kmer = fasta_input[i:i+6]
         if kmer not in index:
@@ -28,7 +29,7 @@ def create_index(fasta_input):
             index[kmer].append(i)
     return index
 
-# Parse fastq file, taken from previous questions
+# Parse fastq file, code taken from previous questions
 def parse_fastq(fastq_file):
     with open(fastq_file, 'r') as file:
         # Don't look at duplicate reads
@@ -64,7 +65,7 @@ def exact_matching(reads, index, fasta_input):
                 # Nothing to even check if part of fasta will not be in it
                 if idx + read_len > len(fasta_input):
                     continue
-                # There is a match at idx
+                # There is a match at idx, so look at the rest of the characters
                 if fasta_input[idx + 6:idx+read_len] == offset_chars_first:
                     total_hits_dict[read].append(idx)
             
