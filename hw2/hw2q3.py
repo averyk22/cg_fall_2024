@@ -1,86 +1,103 @@
+# Build 6mer index and perform exact matching
+# Report the key that got the most index hits, number of times any reads occur in reference genome, smallest 0-based index in the reference genome
+# Notebook links references:
+# - https://nbviewer.org/github/BenLangmead/comp-genomics-class/blob/master/notebooks/CG_Naive.ipynb
+# - https://nbviewer.org/github/BenLangmead/comp-genomics-class/blob/master/notebooks/CG_KmerIndexHash.ipynb
+
 import sys
 import collections
 
-def build_6mer(fasta_file):
-    """Build a 6-mer index from the FASTA file."""
+# Build the 6mer index, taken from previous questions/notebook
+def parse_fasta(fasta_file):
     with open(fasta_file, 'r') as file:
         fasta_input = ''
         for line in file:
             line = line.strip()
             if not line.startswith('>'):
                 fasta_input += ''.join(c for c in line if c in ('A', 'C', 'G', 'T'))
+    return fasta_input
 
+# Create the index of kmers given fasta input, taken from previous questions
+def create_index(fasta_input):
     index = collections.defaultdict(list)
     for i in range(len(fasta_input) - 6 + 1):  # For each 6-mer
         kmer = fasta_input[i:i+6]
-        index[kmer].append(i)
-    return index, fasta_input
+        if kmer not in index:
+            index[kmer] = [i]
+        else:
+            index[kmer].append(i)
+    return index
 
+# Parse fastq file, taken from previous questions
 def parse_fastq(fastq_file):
-    """Parse reads from a FASTQ filehandle."""
     with open(fastq_file, 'r') as file:
-        reads = []
+        # Don't look at duplicate reads
+        reads = set()
         while True:
             first_line = file.readline()
             if not first_line:
                 break  # End of file
-            seq = file.readline().strip()
-            file.readline()  
-            file.readline() 
-            reads.append(seq)
-        return reads
+            seq = file.readline().rstrip()
+            file.readline()
+            file.readline()
+            reads.add(seq)
+        return list(reads)
 
-# Find exact matches and the 3 summary info
+
+# Find exact matches and the 3 summary info, looked at jupyter notebook for reference
 def exact_matching(reads, index, fasta_input):
     positions = collections.defaultdict(int)
-    total_hits_dict = set()
-    total_hits = 0
+    total_hits_dict = collections.defaultdict(list)
+    max_indices_set = set()
     for read in reads:
         read_len = len(read)
+        # Checking to make sure there is a p to compare
         if read_len < 6:
             continue
-        for i in range(len(fasta_input) - read_len + 1):
-            if fasta_input[i:i + read_len] == read:
-                total_hits_dict.add(i)
-        for i in range(read_len - 6 + 1):
-            kmer = read[i:i+6]
-            if kmer in index:
-                for position in index[kmer]:
-                    positions[position] += 1
-    
+        # First 6 characters in read
+        first_6 = read[:6]
+        # Leftover characters in read
+        offset_length = len(read) - 6
+        offset_chars_first = read[6:]
+        if first_6 in index:
+            for idx in index[first_6]:
+                # Nothing to even check if part of fasta will not be in it
+                if idx + read_len > len(fasta_input):
+                    continue
+                # There is a match at idx
+                if fasta_input[idx + 6:idx+read_len] == offset_chars_first:
+                    total_hits_dict[read].append(idx)
+            
     # Find the k-mer(s) with the most index hits
     max_hits = max(len(index[kmer]) for kmer in index)
     most_hits_key = [kmer for kmer in index if len(index[kmer]) == max_hits]
     most_hits_key.sort()
     
     # Find the total number of matches
-    total_hits = len(total_hits_dict)
-
-    # Find the smallest index with the maximum number of read alignments
-    if positions:
-        max_read_align = max(positions.values())
-        min_index_max_read = min(index for index, count in positions.items() if count == max_read_align)
-    else:
-        min_index_max_read = -1
+    total_hits = sum(len(positions) for positions in total_hits_dict.values())
     
-    return ','.join(most_hits_key), total_hits, min_index_max_read
+    # Find the smallest index with the maximum number of read alignments
+    max_positions_count = max(len(indices) for indices in total_hits_dict.values())
+    max_keys = [key for key, positions in total_hits_dict.items() if len(positions) == max_positions_count]
+    for key in max_keys:
+        max_indices_set.update(total_hits_dict[key])
+    smallest_index = min(max_indices_set)
+    return ','.join(most_hits_key), total_hits, smallest_index
 
-def main():
-    if len(sys.argv) != 4:
-        print("Usage: python3 hw2q3.py <fasta_file> <fastq_file> <output_file>")
-        sys.exit(1)
+# Main Program
+if len(sys.argv) != 4:
+    print("Usage: python3 hw2q3.py <fasta_file> <fastq_file> <output_file>")
+    sys.exit(1)
 
-    fasta_file = sys.argv[1]
-    fastq_file = sys.argv[2]
-    output_file = sys.argv[3]
+fasta_file = sys.argv[1]
+fastq_file = sys.argv[2]
+output_file = sys.argv[3]
 
-    index, fasta_input = build_6mer(fasta_file)
-    reads = parse_fastq(fastq_file)
+fasta_input = parse_fasta(fasta_file)
+index = create_index(fasta_input)
+reads = parse_fastq(fastq_file)
 
-    most_hits_key, total_hits, min_index_max_read = exact_matching(reads, index, fasta_input)
+most_hits_key, total_hits, min_index_max_read = exact_matching(reads, index, fasta_input)
 
-    with open(output_file, 'w') as out_file:
-        out_file.write(f"{most_hits_key} {total_hits} {min_index_max_read}\n")
-
-if __name__ == "__main__":
-    main()
+with open(output_file, 'w') as out_file:
+    out_file.write(f"{most_hits_key} {total_hits} {min_index_max_read}\n")
