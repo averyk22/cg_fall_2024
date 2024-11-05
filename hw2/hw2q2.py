@@ -7,7 +7,7 @@
 # - https://nbviewer.org/github/BenLangmead/comp-genomics-class/blob/master/notebooks/FASTQ.ipynb
 
 
-mport sys
+import sys
 import collections
 from collections import defaultdict
 

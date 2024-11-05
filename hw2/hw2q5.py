@@ -1,4 +1,3 @@
-
 # build a k-mer index from a FASTA file, 
 # locate approximate matches for each read in a FASTQ, 
 # scan the reference FASTA to categorize specific loci
@@ -17,28 +16,36 @@
 import sys
 import collections
 
+# Notebook code used: 
+# - https://nbviewer.org/github/BenLangmead/comp-genomics-class/blob/master/notebooks/CG_KmerIndexHash.ipynb
+# - https://nbviewer.org/github/BenLangmead/comp-genomics-class/blob/master/notebooks/FASTQ.ipynb
+# - http://nbviewer.ipython.org/github/BenLangmead/comp-genomics-class/blob/master/notebooks/CG_NaiveApprox.ipynb
+
 # Function taken from Notebook in the HW directions
 def phred33_to_q(qual):
   """ Turn Phred+33 ASCII-encoded quality into Phred-scaled integer """
   return ord(qual)-33
 
-# Building a kmer index based off of partition length fed in and fasta file
-def build_kmer_index(partition_length, fasta_file):
+# Parse the fasta file, code taken from previous questions/notebook
+def parse_fasta(fasta_file):
     with open(fasta_file, 'r') as file:
         fasta_input = ''
         for line in file:
             line = line.strip()
             if not line.startswith('>'):
                 fasta_input += ''.join(c for c in line if c in ('A', 'C', 'G', 'T'))
+    return fasta_input
 
-    index = collections.defaultdict(list)
-    for i in range(len(fasta_input) - partition_length + 1):  # For each 6-mer
-        kmer = fasta_input[i:i+partition_length]
+ # Create the index of kmers given fasta input, code taken from previous questions
+def create_index(fasta_input):
+    index = collections.defaultdict()
+    for i in range(len(fasta_input) - 6 + 1):  # For each 6-mer
+        kmer = fasta_input[i:i+6]
         if kmer not in index:
             index[kmer] = [i]
         else:
             index[kmer].append(i)
-    return index, fasta_input
+    return index
 
 # Parse fastq file but want to save name, sequence, and quality -- taken from jupyter notebook
 def parse_fastq(fastq_file):
@@ -54,39 +61,45 @@ def parse_fastq(fastq_file):
             reads.append((name, seq, qual))
         return reads
 
-# Function for approximate matching 
+# Function for approximate matching, code taken from some of the previous questions
 def approximate_matching(name, read, qual, index, fasta_input, num_mismatches, kmer_len, pos_data):
     partitions = []
     num_partitions = num_mismatches + 1
-    unique_start_positions = set()
+    # Making sure there is no overriding
+    unique_indexes = set()
     
     # Creating the partitions
     for i in range(0, len(read) - kmer_len + 1, kmer_len):
         partition = read[i:i + kmer_len]
-        partitions.append((partition, i))
+        partitions.append(partition)
+    # print(partitions)
     
-    for p, (string, p_offset) in enumerate(partitions):
-        index_hits = index[string]
-        for index_hit in index_hits:
-            start_pos = index_hit - p * kmer_len
-            if start_pos < 0 or start_pos + len(read) > len(fasta_input):
-                continue 
-            mismatches = 0
-            for i in range(len(read)):
-                if fasta_input[start_pos + i] != read[i]:
-                    mismatches += 1
-                    if mismatches > num_mismatches:
-                        break
-            # Collecting the data that has base in the read, base in the reference, and the quality score at the base
-            if mismatches <= num_mismatches:  
-                unique_start_positions.add(start_pos)
+    for p, string in enumerate(partitions):
+        if string in index:
+            for offset in index[string]:
+                start_pos = offset - p * kmer_len
+                if start_pos < 0 or start_pos + len(read) > len(fasta_input):
+                    continue 
+                nmm = 0
                 for i in range(len(read)):
-                    ref_pos = start_pos + i 
-                    base = read[i]
-                    qual_score = phred33_to_q(qual[i])
-                    ref_base = fasta_input[ref_pos]
-                    if name not in pos_data[ref_pos]:
-                        pos_data[ref_pos][name].append((base, qual_score, ref_base))
+                    if fasta_input[start_pos + i] != read[i]:
+                        nmm += 1
+                        if nmm > num_mismatches:
+                            break
+                # Adding quality score if the base doesn't match ref base
+                if nmm <= num_mismatches:  
+                    if start_pos not in unique_indexes:
+                        unique_indexes.add(start_pos)
+                        for j in range(len(read)):
+                            ref_pos = start_pos + j
+                            # Checking bounds if reference position goes out 
+                            if ref_pos < len(fasta_input):
+                                ref_base = fasta_input[ref_pos]
+                                base = read[j]
+                                score = phred33_to_q(qual[j])
+                                # Need to do this check before adding score, can just handle base weights
+                                if base != ref_base:
+                                    pos_data[ref_pos][base] += score
 
 if len(sys.argv) != 4:
     print("Usage: python3 hw2q3.py <fasta_file> <fastq_file> <output_file>")
@@ -97,28 +110,25 @@ kmer_len = int(30/(4 + 1))
 fasta_file = sys.argv[1]
 fastq_file = sys.argv[2]
 output_file = sys.argv[3]
-index, fasta_input = build_kmer_index(int(kmer_len), fasta_file)
+fasta_input = parse_fasta(fasta_file)
+index = create_index(fasta_input)
 reads = parse_fastq(fastq_file)
-pos_data = collections.defaultdict(lambda:collections.defaultdict(list))
+# This holds the reference position, the non-reference base, and its quality score
+pos_data = collections.defaultdict(lambda:collections.defaultdict(int))
 for name, read, qual in reads:
     approximate_matching(name, read, qual, index, fasta_input, num_mismatches, kmer_len, pos_data)
+#print (pos_data.items())
 with open(output_file, 'w') as out_file:
-    for pos in range(len(fasta_input)):
-        if pos in pos_data:
-            ref_base = fasta_input[pos]
-            base_weights = collections.defaultdict(int)
-            for name in pos_data[pos]:
-                for base, qual_score, ref_base in pos_data[pos][name]:
-                    if base != ref_base:
-                        base_weights[base] += qual_score
-            if base_weights:
-                sig_bases = {base: weight for base, weight in base_weights.items() if weight > 20}
-                if sig_bases:
-                    sig_bases = sorted(sig_bases.items(), key=lambda x: (-x[1], x[0]))
-                    f_base, f_weight = sig_bases[0]
-                    if len(sig_bases) > 1:
-                        s_base, s_weight = sig_bases[1]
-                    else:
-                        s_base = '-'
-                        s_weight = 0    
-                    out_file.write(f"{pos} {ref_base} {f_base} {f_weight} {s_base} {s_weight}\n")
+    # Looking at all the the position and the weights -- sorting and outputting
+    for ref_pos, weights in sorted(pos_data.items()):
+        ref_base = fasta_input[ref_pos]
+        if weights:
+            sig_bases = {base: weight for base, weight in weights.items() if weight > 20}
+            if sig_bases:
+                sig_bases = sorted(sig_bases.items(), key=lambda x: (-x[1], x[0]))
+                f_base, f_weight = sig_bases[0]
+                if len(sig_bases) > 1:
+                    s_base, s_weight = sig_bases[1]
+                else:
+                    s_base, s_weight  = '-', 0
+                out_file.write(f"{ref_pos} {ref_base} {f_base} {f_weight} {s_base} {s_weight}\n")
